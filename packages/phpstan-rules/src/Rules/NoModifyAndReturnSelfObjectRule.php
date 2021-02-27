@@ -12,6 +12,8 @@ use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\Node\Stmt\Return_;
 use PhpParser\NodeFinder;
 use PHPStan\Analyser\Scope;
+use PHPStan\Type\ObjectType;
+use PHPStan\Type\MixedType;
 use Rector\Core\PhpParser\Node\BetterNodeFinder;
 use Symplify\PHPStanRules\NodeFinder\ReturnNodeFinder;
 use Symplify\PHPStanRules\Printer\NodeComparator;
@@ -77,6 +79,11 @@ final class NoModifyAndReturnSelfObjectRule extends AbstractSymplifyRule
 
         foreach ($returns as $return) {
             if (! $return->expr instanceof Expr) {
+                continue;
+            }
+
+            $type = $scope->getType($return->expr);
+            if (! $type instanceof MixedType) {
                 continue;
             }
 
