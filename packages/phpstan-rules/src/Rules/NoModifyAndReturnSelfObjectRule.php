@@ -34,6 +34,10 @@ final class NoModifyAndReturnSelfObjectRule extends AbstractSymplifyRule
      */
     public function process(Node $node, Scope $scope): array
     {
+        if ($node->params === []) {
+            return [];
+        }
+
         return [self::ERROR_MESSAGE];
     }
 
