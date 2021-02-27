@@ -22,6 +22,7 @@ final class NoModifyAndReturnSelfObjectRuleTest extends AbstractServiceAwareRule
     public function provideData(): Iterator
     {
         yield [__DIR__ . '/Fixture/SkipNoParams.php', []];
+        yield [__DIR__ . '/Fixture/SkipNoReturn.php', []];
     }
 
     protected function getRule(): Rule

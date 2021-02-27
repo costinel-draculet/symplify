@@ -38,6 +38,10 @@ final class NoModifyAndReturnSelfObjectRule extends AbstractSymplifyRule
             return [];
         }
 
+        if ($node->returnType === null) {
+            return [];
+        }
+
         return [self::ERROR_MESSAGE];
     }
 
