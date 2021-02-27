@@ -6,9 +6,16 @@ namespace Symplify\PHPStanRules\Rules;
 
 use PhpParser\Node;
 use PhpParser\Node\Expr;
+use PhpParser\Node\Expr\Assign;
+use PhpParser\Node\Expr\Clone_;
 use PhpParser\Node\Stmt\ClassMethod;
+use PhpParser\Node\Stmt\Return_;
+use PhpParser\NodeFinder;
 use PHPStan\Analyser\Scope;
+use Rector\Core\PhpParser\Node\BetterNodeFinder;
 use Symplify\PHPStanRules\NodeFinder\ReturnNodeFinder;
+use Symplify\PHPStanRules\Printer\NodeComparator;
+use Symplify\PHPStanRules\ValueObject\PHPStanAttributeKey;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\CodeSample;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
 
@@ -27,9 +34,21 @@ final class NoModifyAndReturnSelfObjectRule extends AbstractSymplifyRule
      */
     private $returnNodeFinder;
 
-    public function __construct(ReturnNodeFinder $returnNodeFinder)
+    /**
+     * @var NodeFinder
+     */
+    private $nodeFinder;
+
+    /**
+     * @var NodeComparator
+     */
+    private $nodeComparator;
+
+    public function __construct(ReturnNodeFinder $returnNodeFinder, NodeFinder $nodeFinder, NodeComparator $nodeComparator)
     {
         $this->returnNodeFinder = $returnNodeFinder;
+        $this->nodeFinder = $nodeFinder;
+        $this->nodeComparator = $nodeComparator;
     }
 
     /**
@@ -60,9 +79,45 @@ final class NoModifyAndReturnSelfObjectRule extends AbstractSymplifyRule
             if (! $return->expr instanceof Expr) {
                 continue;
             }
+
+            if (! $this->isClone($return, $return->expr)) {
+                return [self::ERROR_MESSAGE];
+            }
         }
 
-        return [self::ERROR_MESSAGE];
+        return [];
+    }
+
+    private function isClone(Node $return, Expr $expr): bool
+    {
+        $filter = function (Node $node) use ($expr): bool {
+            if (! $node instanceof Assign) {
+                return false;
+            }
+
+            if (! $node->expr instanceof Clone_) {
+                return false;
+            }
+
+            return $this->nodeComparator->areNodesEqual($node->var, $expr);
+        };
+
+        $previousStatement = $return->getAttribute(PHPStanAttributeKey::PREVIOUS);
+        if ($previousStatement !== null) {
+            $foundNode = $this->nodeFinder->findFirst([$previousStatement], $filter);
+            if ($foundNode !== null) {
+                return true;
+            }
+
+            return $this->isClone($previousStatement, $expr);
+        }
+
+        $parent = $return->getAttribute(PHPStanAttributeKey::PARENT);
+        if ($parent instanceof Node) {
+            return $this->isClone($parent, $expr);
+        }
+
+        return false;
     }
 
     public function getRuleDefinition(): RuleDefinition
