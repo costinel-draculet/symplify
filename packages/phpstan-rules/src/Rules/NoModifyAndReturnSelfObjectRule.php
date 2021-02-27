@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Symplify\PHPStanRules\Rules;
 
 use PhpParser\Node;
+use PhpParser\Node\Expr;
 use PhpParser\Node\Stmt\ClassMethod;
 use PHPStan\Analyser\Scope;
+use Symplify\PHPStanRules\NodeFinder\ReturnNodeFinder;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\CodeSample;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
 
@@ -19,6 +21,16 @@ final class NoModifyAndReturnSelfObjectRule extends AbstractSymplifyRule
      * @var string
      */
     public const ERROR_MESSAGE = 'Use void instead of modify and return self object';
+
+    /**
+     * @var ReturnNodeFinder
+     */
+    private $returnNodeFinder;
+
+    public function __construct(ReturnNodeFinder $returnNodeFinder)
+    {
+        $this->returnNodeFinder = $returnNodeFinder;
+    }
 
     /**
      * @return string[]
@@ -38,8 +50,16 @@ final class NoModifyAndReturnSelfObjectRule extends AbstractSymplifyRule
             return [];
         }
 
-        if ($node->returnType === null) {
+        $returns = $this->returnNodeFinder->findReturnsWithValues($node);
+
+        if ($returns === []) {
             return [];
+        }
+
+        foreach ($returns as $return) {
+            if (! $return->expr instanceof Expr) {
+                continue;
+            }
         }
 
         return [self::ERROR_MESSAGE];
