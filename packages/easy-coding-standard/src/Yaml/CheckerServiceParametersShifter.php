@@ -68,10 +68,15 @@ final class CheckerServiceParametersShifter
         $this->stringFormatConverter = new StringFormatConverter();
 
         /** @var string[] $serviceKeywordsProperty */
-        $serviceKeywordsProperty = (new ReflectionClass(YamlFileLoader::class))
-            ->getStaticProperties()['serviceKeywords'];
+        $reflection = new ReflectionClass(YamlFileLoader::class);
+        $staticProperties = $reflection->getStaticProperties();
+        $serviceKeywordsProperty = isset($staticProperties['serviceKeywords']) ? $staticProperties['serviceKeywords'] : null;
+        // fix for symfony/dependency-injection:v4.4.19
+        if (null === $serviceKeywordsProperty) {
+          $serviceKeywordsProperty = $reflection->getConstant('SERVICE_KEYWORDS');
+        }
 
-        $this->serviceKeywords = $serviceKeywordsProperty;
+        $this->serviceKeywords = $serviceKeywordsProperty ?? [];
     }
 
     /**
